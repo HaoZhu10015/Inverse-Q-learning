@@ -1,9 +1,64 @@
 import numpy as np
 
 
-# class ReplayBuffer:
-#
-#     raise NotImplementedError
+class ReplayBuffer:
+    """
+    Implement replay buffer.
+    """
+    def __init__(self, max_size):
+        """
+        :param max_size: the maximum number of experiences stored in the replay buffer. int.
+        """
+
+        self._max_size = max_size
+        self._data = {
+            "states": [],
+            "actions": [],
+            "next_states": [],
+        }
+        self._size = 0
+
+    def get_num_experiences(self):
+        """
+        :return: current number of experiences stored in the replay buffer. int.
+        """
+        return self._size
+
+    def add_experience(self, experience):
+        """
+        add generated experience to the replay buffer.
+
+        :param experience: experience to be added to the replay buffer. (state, action, next_state).
+        """
+        if self._size == self._max_size:
+            for i, key in enumerate(self._data.keys()):
+                self._data[key].pop(0)
+                self._data[key].append(experience[i])
+        else:
+            for i, key in enumerate(self._data.keys()):
+                self._data[key].append(experience[i])
+            self._size += 1
+
+    def random_sample(self, batch_size):
+        """
+        Generate random sample batch.
+
+        :param batch_size: number of experiences in the generated random sample batch. int.
+        :return: generated random sample batch. tuple:(states, actions, next_states).
+        """
+        if batch_size > self._size:
+            raise RuntimeError("No enough experiences available for the given batch size.")
+        samples = {
+            "states": [],
+            "actions": [],
+            "next_states": [],
+        }
+
+        index = np.random.choice(self._size, batch_size)
+        for key in self._data.keys():
+            samples[key] = [self._data[key][i] for i in index]
+
+        return tuple(np.asarray(value) for value in samples.values())
 
 
 def find_optimal_action_value(reward, transition_probability_matrix, num_states, num_actions, discount=0.99, threshold=1e-2):
