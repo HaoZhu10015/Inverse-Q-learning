@@ -110,11 +110,57 @@ class R(nn.Module):
 
 
 class DeepInverseQLearning:
-    def __init(self):
+    def __init__(self,
+                 q_function,
+                 q_sh_function,
+                 rho_function,
+                 r_function,
+                 num_states,
+                 num_actions,
+                 learning_rate,
+                 ):
+        self.num_states = num_states
+        self.num_actions = num_actions
+
+        self.rho = rho_function(self.num_states, self.num_actions)
+        self.rho_optim = optim.Adam(self.rho.parameters(), lr=learning_rate)
+
+        self.q_sh = q_sh_function(self.num_states, self.num_actions)
+        self.q_sh_target = q_sh_function(self.num_states, self.num_actions)
+        self.q_sh_optim = optim.Adam(self.q_sh.parameters, lr=learning_rate)
+
+        self.r = r_function(self.num_states, self.num_actions)
+        self.r_target = r_function(self.num_states, self.num_actions)
+        self.r_optim = optim.Adam(self.r.parameters(), lr=learning_rate)
+
+        self.q = q_function(self.num_states, self.num_actions)
+        self.q_target = q_function(self.num_states, self.num_actions)
+        self.q_optim = optim.Adam(self.q.parameters(), lr=learning_rate)
+
+    def _update_rho(self, states, actions, next_states):
         raise NotImplementedError
 
-    def train(self):
+    def _update_q_sh(self, states, actions, next_states):
         raise NotImplementedError
+
+    def _update_r(self, states, actions, next_actions):
+        raise NotImplementedError
+
+    def _update_q(self, states, actions, next_actions):
+        raise NotImplementedError
+
+    def _soft_update_target_function(self, target_function, source_function):
+        raise NotImplementedError
+
+    def train(self, states, actions, next_states):
+        self._update_q_sh(states, actions, next_states)
+        self._update_rho(states, actions, next_states)
+        self._update_r(states, actions, next_states)
+        self._update_q(states, actions, next_states)
+
+        self._soft_update_target_function(self.q_sh_target, self.q_sh)
+        self._soft_update_target_function(self.r_target, self.r)
+        self._soft_update_target_function(self.q_target, self.q)
 
 
 def tt(nparray, device=torch.device('cuda')):
