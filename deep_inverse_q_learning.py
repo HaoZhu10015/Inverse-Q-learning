@@ -187,8 +187,34 @@ class DeepInverseQLearning:
         loss.backward()
         self._q_sh_optim.step()
 
-    def _update_r(self, states, actions, next_states):
-        raise NotImplementedError
+    def _update_r(self, states, actions):
+        """
+        train the function approximation model for reward function r.
+
+        :param states: random sampled states. nparray. (Batch_Size, num_states).
+        :param actions: actions for random sampled states. nparray. (Batch_Size, 1).
+        """
+
+        self._r_optim.zero_grad()
+
+        gather_a_index = torch.tensor(actions, dtype=torch.int64).unsqueeze(1).to(self._device)
+        gather_b_index = [[i for i in range(self.num_actions)] for j in range(len(actions))]
+        for i, a in enumerate(actions):
+            gather_b_index[i].remove(a)
+        gather_b_index = torch.tensor(gather_b_index, dtype=torch.int64).unsqueeze(1).to(self._device)
+
+        pred_r = self._r(self._tt(states)).gather(1, gather_a_index).squeeze(1)
+
+        eta = torch.log(self._rho(self._tt(states))) - self._q_sh_target(self._tt(states))
+        eta_a = eta.gather(1, gather_a_index).squeeze(1)
+        eta_b = eta.gather(1, gather_b_index)
+        r_b = self._r_target(self._tt(states)).gather(1, gather_b_index)
+        target = eta_a + 1 / (len(actions) - 1) * torch.sum((r_b - eta_b), dim=1)
+
+        loss = self._mse_loss(pred_r, target.detach())
+        loss.backward()
+        self._r_optim.step()
+
 
     def _update_q(self, states, actions, next_states):
         """
@@ -218,7 +244,7 @@ class DeepInverseQLearning:
     def train(self, states, actions, next_states):
         self._update_q_sh(states, actions, next_states)
         self._update_rho(states, actions)
-        self._update_r(states, actions, next_states)
+        self._update_r(states, actions)
         self._update_q(states, actions, next_states)
 
         self._soft_update_target_function(self._q_sh_target, self._q_sh)
