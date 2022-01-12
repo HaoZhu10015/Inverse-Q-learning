@@ -11,17 +11,17 @@ class Q(nn.Module):
     """
     Neural Network for Q function approximation.
     """
-    def __init__(self, num_states, num_actions):
+    def __init__(self, state_feature_length, num_actions):
         """
-        :param num_states: number of states. int.
+        :param state_feature_length: number of states. int.
         :param num_actions: number of actions. int.
         """
 
         super(Q, self).__init__()
-        self.num_states = num_states
+        self.state_feature_length = state_feature_length
         self.num_actions = num_actions
 
-        self.fc1 = nn.Linear(self.num_states, 20)
+        self.fc1 = nn.Linear(self.state_feature_length, 20)
         self.fc2 = nn.Linear(20, 80)
         self.fc3 = nn.Linear(80, self.num_actions)
         self.actvation = nn.ReLU()
@@ -36,17 +36,17 @@ class ShiftQ(nn.Module):
     """
     Neural Network for Shift-Q function approximation.
     """
-    def __init__(self, num_states, num_actions):
+    def __init__(self, state_feature_length, num_actions):
         """
-        :param num_states: number of states. int.
+        :param state_feature_length: number of states. int.
         :param num_actions: number of actions. int.
         """
 
         super(ShiftQ, self).__init__()
-        self.num_states = num_states
+        self.state_feature_length = state_feature_length
         self.num_actions = num_actions
 
-        self.fc1 = nn.Linear(self.num_states, 20)
+        self.fc1 = nn.Linear(self.state_feature_length, 20)
         self.fc2 = nn.Linear(20, 80)
         self.fc3 = nn.Linear(80, self.num_actions)
         self.actvation = nn.ReLU()
@@ -62,17 +62,17 @@ class Rho(nn.Module):
     Neural Network for policy function approximation.
     """
 
-    def __init__(self, num_states, num_actions):
+    def __init__(self, state_feature_length, num_actions):
         """
-        :param num_states: number of states. int.
+        :param state_feature_length: number of states. int.
         :param num_actions: number of actions. int.
         """
 
         super(Rho, self).__init__()
-        self.num_states = num_states
+        self.state_feature_length = state_feature_length
         self.num_actions = num_actions
 
-        self.fc1 = nn.Linear(self.num_states, 80)
+        self.fc1 = nn.Linear(self.state_feature_length, 80)
         self.fc2 = nn.Linear(80, 20)
         self.fc3 = nn.Linear(20, self.num_actions)
         self.actvation = nn.ReLU()
@@ -88,17 +88,17 @@ class R(nn.Module):
     Neural Network for reward function approximation.
     """
 
-    def __init__(self, num_states, num_actions):
+    def __init__(self, state_feature_length, num_actions):
         """
-        :param num_states: number of states. int.
+        :param state_feature_length: number of states. int.
         :param num_actions: number of actions. int.
         """
 
         super(R, self).__init__()
-        self.num_states = num_states
+        self.state_feature_length = state_feature_length
         self.num_actions = num_actions
 
-        self.fc1 = nn.Linear(self.num_states, 20)
+        self.fc1 = nn.Linear(self.state_feature_length, 20)
         self.fc2 = nn.Linear(20, 80)
         self.fc3 = nn.Linear(80, self.num_actions)
         self.actvation = nn.ReLU()
@@ -114,36 +114,34 @@ class DeepInverseQLearning:
     Deep Inverse Q-learning algorithm.
     """
     def __init__(self,
-                 q_function,
-                 q_sh_function,
-                 rho_function,
-                 r_function,
-                 num_states,
+                 state_feature_length,
                  num_actions,
                  discount,
                  learning_rate,
+                 tau,
                  device=torch.device('cuda')
                  ):
 
-        self.num_states = num_states
+        self.state_feature_length = state_feature_length
         self.num_actions = num_actions
         self._discount = discount
+        self._tau = tau
 
         self._device = device
 
-        self._rho = rho_function(self.num_states, self.num_actions).to(self._device)
+        self._rho = Rho(self.state_feature_length, self.num_actions).to(self._device)
         self._rho_optim = optim.Adam(self._rho.parameters(), lr=learning_rate)
 
-        self._q_sh = q_sh_function(self.num_states, self.num_actions).to(self._device)
-        self._q_sh_target = q_sh_function(self.num_states, self.num_actions).to(self._device)
-        self._q_sh_optim = optim.Adam(self._q_sh.parameters, lr=learning_rate)
+        self._q_sh = ShiftQ(self.state_feature_length, self.num_actions).to(self._device)
+        self._q_sh_target = ShiftQ(self.state_feature_length, self.num_actions).to(self._device)
+        self._q_sh_optim = optim.Adam(self._q_sh.parameters(), lr=learning_rate)
 
-        self._r = r_function(self.num_states, self.num_actions).to(self._device)
-        self._r_target = r_function(self.num_states, self.num_actions).to(self._device)
+        self._r = R(self.state_feature_length, self.num_actions).to(self._device)
+        self._r_target = R(self.state_feature_length, self.num_actions).to(self._device)
         self._r_optim = optim.Adam(self._r.parameters(), lr=learning_rate)
 
-        self._q = q_function(self.num_states, self.num_actions).to(self._device)
-        self._q_target = q_function(self.num_states, self.num_actions).to(self._device)
+        self._q = Q(self.state_feature_length, self.num_actions).to(self._device)
+        self._q_target = Q(self.state_feature_length, self.num_actions).to(self._device)
         self._q_optim = optim.Adam(self._q.parameters(), lr=learning_rate)
 
         self._cs_loss = nn.CrossEntropyLoss()
@@ -156,14 +154,14 @@ class DeepInverseQLearning:
         """
         train the function approximation model for policy.
 
-        :param states: random sampled states. nparray. (Batch_Size, num_states).
+        :param states: random sampled states. nparray. (Batch_Size, state_feature_length).
         :param actions: actions for random sampled states. nparray. (Batch_Size, 1).
         """
 
         self._rho_optim.zero_grad()
 
         output = self._rho(self._tt(states))
-        loss = self._cs_loss(output, self._tt(actions))
+        loss = self._cs_loss(output, torch.tensor(actions, dtype=torch.int64).to(self._device))
         loss.backward()
         self._rho_optim.step()
 
@@ -171,9 +169,9 @@ class DeepInverseQLearning:
         """
         train the function approximation model for Shifted Q function Q_sh.
 
-        :param states: random sampled states. nparray. (Batch_Size, num_states).
+        :param states: random sampled states. nparray. (Batch_Size, state_feature_length).
         :param actions: actions for random sampled states. nparray. (Batch_Size, 1).
-        :param next_states: next states of random sampled states. nparray. (Batch_Size, num_states).
+        :param next_states: next states of random sampled states. nparray. (Batch_Size, state_feature_length).
         """
 
         self._q_sh_optim.zero_grad()
@@ -191,7 +189,7 @@ class DeepInverseQLearning:
         """
         train the function approximation model for reward function r.
 
-        :param states: random sampled states. nparray. (Batch_Size, num_states).
+        :param states: random sampled states. nparray. (Batch_Size, state_feature_length).
         :param actions: actions for random sampled states. nparray. (Batch_Size, 1).
         """
 
@@ -201,7 +199,7 @@ class DeepInverseQLearning:
         gather_b_index = [[i for i in range(self.num_actions)] for j in range(len(actions))]
         for i, a in enumerate(actions):
             gather_b_index[i].remove(a)
-        gather_b_index = torch.tensor(gather_b_index, dtype=torch.int64).unsqueeze(1).to(self._device)
+        gather_b_index = torch.tensor(gather_b_index, dtype=torch.int64).to(self._device)
 
         pred_r = self._r(self._tt(states)).gather(1, gather_a_index).squeeze(1)
 
@@ -220,9 +218,9 @@ class DeepInverseQLearning:
         """
         train the function approximation model for state value function Q.
 
-        :param states: random sampled states. nparray. (Batch_Size, num_states).
+        :param states: random sampled states. nparray. (Batch_Size, state_feature_length).
         :param actions: actions for random sampled states. nparray. (Batch_Size, 1).
-        :param next_states: next states of random sampled states. nparray. (Batch_Size, num_states).
+        :param next_states: next states of random sampled states. nparray. (Batch_Size, state_feature_length).
         """
 
         self._q_optim.zero_grad()
@@ -239,7 +237,10 @@ class DeepInverseQLearning:
         self._q_optim.step()
 
     def _soft_update_target_function(self, target_function, source_function):
-        raise NotImplementedError
+        for key in target_function.state_dict().keys():
+            target_w = target_function.state_dict()[key]
+            source_w = source_function.state_dict()[key]
+            target_function.state_dict()[key] = (1 - self._tau) * target_w + self._tau * source_w
 
     def train(self, states, actions, next_states):
         self._update_q_sh(states, actions, next_states)
@@ -250,5 +251,4 @@ class DeepInverseQLearning:
         self._soft_update_target_function(self._q_sh_target, self._q_sh)
         self._soft_update_target_function(self._r_target, self._r)
         self._soft_update_target_function(self._q_target, self._q)
-
 
