@@ -170,6 +170,9 @@ class ObjectWorld:
                     else:
                         return self.wind / self.num_actions
 
+    def get_state_feature_length(self, discrete):
+        return 2 * self.num_colors * self.grid_size if discrete else 2 * self.num_colors
+
     def feature_vector(self, s, discrete=True):
         """
         calculate feature vector of states.
