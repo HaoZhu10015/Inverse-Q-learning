@@ -207,7 +207,7 @@ class DeepInverseQLearning:
         eta_a = eta.gather(1, gather_a_index).squeeze(1)
         eta_b = eta.gather(1, gather_b_index)
         r_b = self._r_target(self._tt(states)).gather(1, gather_b_index)
-        target = eta_a + 1 / (len(actions) - 1) * torch.sum((r_b - eta_b), dim=1)
+        target = eta_a + 1 / (self.num_actions - 1) * torch.sum((r_b - eta_b), dim=1)
 
         loss = self._mse_loss(pred_r, target.detach())
         loss.backward()
