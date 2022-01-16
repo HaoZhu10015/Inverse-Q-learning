@@ -299,6 +299,37 @@ class ObjectWorld:
 
         return np.random.choice(self.num_states, p=self.transition_probability_matrix[s, :, a])
 
+    def generate_trajectories(self, num_traj, len_traj, policy, initiate_s=None):
+        """
+        generate trajectories.
+
+        :param num_traj: number of trajectories to generate. int.
+        :param len_traj: length of every generated trajectory. int.
+        :param policy: policy for choosing the action. nparray. (states, actions).
+        :param initiate_s: start state of every trajectory. int.
+        :return: generated trajectories. nparray. (num_traj, len_traj, 3: (state, action, next_state))
+        """
+        trajectories = []
+
+        for _ in range(num_traj):
+            trajectory = []
+
+            if initiate_s is not None:
+                s = initiate_s
+            else:
+                s = np.random.randint(self.num_states)
+
+            for i in range(len_traj):
+                a = np.random.choice(self.num_actions, p=policy[s])
+                ns = self.step(s, a)
+
+                trajectory.append([s, a, ns])
+                s = ns
+
+            trajectories.append(trajectory)
+
+        return np.asarray(trajectories)
+
     def draw_objectworld(self):
         raise NotImplementedError
 

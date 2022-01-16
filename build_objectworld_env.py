@@ -3,7 +3,7 @@ import pickle
 import matplotlib.pyplot as plt
 import os
 from objectworld import ObjectWorld
-from utils import find_optimal_action_value, find_optimal_state_value
+from utils import find_optimal_action_value, find_optimal_state_value, find_policy
 
 
 if __name__ == '__main__':
@@ -13,11 +13,14 @@ if __name__ == '__main__':
 
     grid_size = 32
     num_objects = 50
-    num_colors = 3
+    num_colors = 2
     wind = 0.3
 
     discount = 0.8
     threshold = 1e-4
+
+    len_traj = 8
+    num_traj = 512
 
     info_file = os.path.join(save_dir, "info.md")
     with open(info_file, 'w') as f:
@@ -32,6 +35,10 @@ if __name__ == '__main__':
         f.write("## Parameters for ground truth calculation\n\n")
         f.write("*discount*: {}\n\n".format(discount))
         f.write("*threshold*: {:.2e}\n\n".format(threshold))
+        f.write("\n\n")
+        f.write("## Generate trajectories\n\n")
+        f.write("*Length of every trajectory*: {}\n\n".format(len_traj))
+        f.write("*Number of trajectories generated*: {}\n\n".format(num_traj))
 
     objw_env = ObjectWorld(num_objects=num_objects,
                            num_colors=num_colors,
@@ -83,3 +90,12 @@ if __name__ == '__main__':
     action_value_vector_file = os.path.join(save_dir, "gt_action_value.npy")
     np.save(action_value_vector_file, action_value_vector)
 
+    # generate trajectories
+    expert_policy = find_policy(action_value_vector,
+                                num_states=objw_env.num_states,
+                                num_actions=objw_env.num_actions,
+                                method="boltzmann")
+    trajectories = objw_env.generate_trajectories(num_traj=num_traj, len_traj=len_traj, policy=expert_policy)
+
+    traj_file = os.path.join(save_dir, "trajectories.npy")
+    np.save(traj_file, trajectories)

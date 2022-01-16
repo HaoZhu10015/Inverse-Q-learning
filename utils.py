@@ -61,7 +61,7 @@ class ReplayBuffer:
         return tuple(np.asarray(value) for value in samples.values())
 
 
-def find_optimal_action_value(reward, transition_probability_matrix, num_states, num_actions, discount=0.99, threshold=1e-2):
+def find_optimal_action_value(reward, transition_probability_matrix, num_states, num_actions, discount=0.99, threshold=1e-3):
     """
     calculate the optimal action value function of given enviroment.
 
@@ -99,7 +99,7 @@ def find_optimal_action_value(reward, transition_probability_matrix, num_states,
     return q
 
 
-def find_optimal_state_value(reward, transition_probability_matrix, num_states, num_actions, discount=0.99, threshold=1e-2):
+def find_optimal_state_value(reward, transition_probability_matrix, num_states, num_actions, discount=0.99, threshold=1e-3):
     """
     calculate the optimal state value function of given enviroment.
 
@@ -181,5 +181,33 @@ def find_policy(q, num_states, num_actions, **kwargs):
     return policy
 
 
+def policy_eval(policy, reward, transition_probability_matrix, num_states, discount=0.99, threshold=1e-3):
+    """
+    Policy evaluation.
+
+    :param policy: policy to evaluation. nparray. (states, actions).
+    :param reward: ground truth reward of the enviroment. nparray. (states, ).
+    :param transition_probability_matrix: transition probability p(st | s, a). nparray. (states, states, actions).
+    :param num_states: number of states in the enviroment. int.
+    :param discount: discount rate gamma. float.
+    :param threshold: stop when difference smaller than threshold. float.
+    :return: state value estimation for given policy. nparray. (states, ).
+    """
+    v = np.zeros(num_states)
+    while True:
+        delta = 0
+        for s in range(num_states):
+            pi = policy[s]
+            tp = transition_probability_matrix[s, :, :]
+            target = np.dot(pi, np.matmul(tp.T, (reward + discount * v).reshape(-1, 1)))
+
+            delta = max(delta, np.abs(target - v[s]))
+
+            v[s] = target
+
+        if delta < threshold:
+            break
+
+    return v
 
 
