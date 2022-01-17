@@ -147,9 +147,7 @@ def find_policy(q, num_states, num_actions, **kwargs):
     :param num_states: number of states. int.
     :param num_actions: number of actions. int.
     :param kwargs:
-            1. "method": method to generating policy.
-                         default: "greedy"
-                         other possible values: ("epsilon_greedy", "boltzmann")
+            1. "method": method to generating policy.{"epsilon_greedy", "boltzmann", "greedy"(default)}
             2. "epsilon": need to be assigned when method="epsilon_greedy“。
                           default: 0.2
     :return: policy generated according to the action value function and method specified. nparray. (states, actions)
