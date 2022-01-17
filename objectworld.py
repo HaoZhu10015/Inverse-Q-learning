@@ -173,7 +173,7 @@ class ObjectWorld:
     def get_state_feature_length(self, discrete):
         return 2 * self.num_colors * self.grid_size if discrete else 2 * self.num_colors
 
-    def feature_vector(self, s, discrete=True):
+    def get_feature_vector(self, s, discrete=True):
         """
         calculate feature vector of states.
 
@@ -211,32 +211,32 @@ class ObjectWorld:
                 nearest_outer_color[c] = 0.0
 
         if discrete:
-            state = np.zeros(2 * self.num_colors * self.grid_size)
+            feature = np.zeros(2 * self.num_colors * self.grid_size)
             i = 0
             for c in range(self.num_colors):
                 for n in range(1, self.grid_size+1):
-                    state[i] = int(nearest_inner_color[c] < n)
-                    state[i + self.num_colors * self.grid_size] = int(nearest_outer_color[c] < n)
+                    feature[i] = int(nearest_inner_color[c] < n)
+                    feature[i + self.num_colors * self.grid_size] = int(nearest_outer_color[c] < n)
                     i += 1
 
         else:
-            state = np.zeros(2 * self.num_colors)
+            feature = np.zeros(2 * self.num_colors)
             i = 0
             for c in range(self.num_colors):
-                state[i] = nearest_inner_color[c]
-                state[i + self.num_colors] = nearest_outer_color[c]
+                feature[i] = nearest_inner_color[c]
+                feature[i + self.num_colors] = nearest_outer_color[c]
 
-        return state
+        return feature
 
-    def feature_matrix(self, discrete=True):
+    def get_feature_matrix(self, discrete=True):
         """
         Generate the feature of all states.
 
         :param discrete: using the discrete or continuous feature. bool.
-        :return: feature matrix of all states. nparray.
+        :return: feature matrix of all states. nparray. (states, len_feature)
         """
 
-        return np.array([self.feature_vector(s, discrete) for s in range(self.num_states)])
+        return np.array([self.get_feature_vector(s, discrete) for s in range(self.num_states)])
 
     def _reward(self, s):
         """

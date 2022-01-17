@@ -3,7 +3,7 @@ import pickle
 import matplotlib.pyplot as plt
 import os
 from objectworld import ObjectWorld
-from utils import find_optimal_action_value, find_optimal_state_value, find_policy
+from utils import find_optimal_action_value, find_optimal_state_value, find_policy, policy_eval
 
 
 if __name__ == '__main__':
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     len_traj = 8
     num_traj = 512
 
-    info_file = os.path.join(save_dir, "info.md")
+    info_file = os.path.join(save_dir, "README.md")
     with open(info_file, 'w') as f:
         f.write("## Parameters for the enviroment \n\n")
         f.write("*grid size*: {}\n\n".format(grid_size))
@@ -51,14 +51,14 @@ if __name__ == '__main__':
 
     # draw reward matrix
     fig = plt.figure(10)
-    plt.title("Reward matrix")
+    # plt.title("Reward matrix")
     plt.imshow(objw_env.reward_vector.reshape(grid_size, grid_size))
     plt.colorbar()
     plt.show()
     fig.savefig(os.path.join(save_dir, "reward_matrix.png"), dpi=300)
 
-    # calculate ground truth of state value function
-    state_value_vector = find_optimal_state_value(
+    # calculate optimal state value function
+    optim_state_value_vector = find_optimal_state_value(
         reward=objw_env.reward_vector,
         transition_probability_matrix=objw_env.transition_probability_matrix,
         num_states=objw_env.num_states,
@@ -67,18 +67,17 @@ if __name__ == '__main__':
         threshold=threshold
     )
     fig = plt.figure(10)
-    plt.title("State Value")
-    plt.imshow(state_value_vector.reshape(grid_size, grid_size))
+    # plt.title("State Value")
+    plt.imshow(optim_state_value_vector.reshape(grid_size, grid_size))
     plt.colorbar()
-    plt.clim(np.ceil(np.max(state_value_vector)), np.floor(np.min(state_value_vector)))
+    # plt.clim(np.ceil(np.max(optim_state_value_vector)), np.floor(np.min(optim_state_value_vector)))
     plt.show()
-    fig.savefig(os.path.join(save_dir, "state_value.png"), dpi=300)
+    fig.savefig(os.path.join(save_dir, "optimal_state_value.png"), dpi=300)
 
-    state_value_vector_file = os.path.join(save_dir, "gt_state_value.npy")
-    np.save(state_value_vector_file, state_value_vector)
+    np.save(os.path.join(save_dir, "optimal_state_value.npy"), optim_state_value_vector)
 
-    # calculate ground truth of action value function
-    action_value_vector = find_optimal_action_value(
+    # calculate optimal action value function
+    optimal_action_value_vector = find_optimal_action_value(
         reward=objw_env.reward_vector,
         transition_probability_matrix=objw_env.transition_probability_matrix,
         num_states=objw_env.num_states,
@@ -87,11 +86,10 @@ if __name__ == '__main__':
         threshold=threshold
     )
 
-    action_value_vector_file = os.path.join(save_dir, "gt_action_value.npy")
-    np.save(action_value_vector_file, action_value_vector)
+    np.save(os.path.join(save_dir, "optimal_action_value.npy"), optimal_action_value_vector)
 
     # generate trajectories
-    expert_policy = find_policy(action_value_vector,
+    expert_policy = find_policy(optimal_action_value_vector,
                                 num_states=objw_env.num_states,
                                 num_actions=objw_env.num_actions,
                                 method="boltzmann")
@@ -99,3 +97,27 @@ if __name__ == '__main__':
 
     traj_file = os.path.join(save_dir, "trajectories.npy")
     np.save(traj_file, trajectories)
+
+    # Calculate the ground truth policy sampled from the generated trajectories and save.
+    gt_policy = np.zeros((objw_env.num_states, objw_env.num_actions))
+    for traj in trajectories:
+        for s, a, ns in traj:
+            gt_policy[s, a] += 1
+    gt_policy[gt_policy.sum(axis=1) == 0] = 1e-6
+    gt_policy /= gt_policy.sum(axis=1).reshape(-1, 1)
+
+    np.save(os.path.join(save_dir, "gt_policy.npy"), gt_policy)
+
+    # Calculate the ground truth state value.
+    gt_state_value = policy_eval(policy=gt_policy,
+                                 reward=objw_env.reward_vector,
+                                 transition_probability_matrix=objw_env.transition_probability_matrix,
+                                 num_states=objw_env.num_states,
+                                 discount=discount)
+    np.save(os.path.join(save_dir, "gt_state_value.npy"), gt_state_value)
+
+    fig = plt.figure(10)
+    plt.imshow(gt_state_value.reshape(grid_size, grid_size))
+    plt.colorbar()
+    plt.show()
+    fig.savefig(os.path.join(save_dir, "ground_truth_state_value.png"), dpi=300)

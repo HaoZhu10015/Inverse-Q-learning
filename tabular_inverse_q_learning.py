@@ -58,7 +58,6 @@ class TabularInverseQLearning:
         self._update_r(state, action)
         self._update_q(state, action, next_state)
 
-
     def get_reward(self):
         return self._r.copy()
 
