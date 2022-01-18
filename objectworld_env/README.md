@@ -1,4 +1,4 @@
-## Parameters for the enviroment 
+# Parameters for the enviroment 
 
 *grid size*: 32
 
@@ -14,7 +14,7 @@ Objectworld enviroment is saved in ***objectworld_env.txt*** via *pickle.dump()*
 
 
 
-## Parameters for ground truth calculation
+# Parameters for ground truth calculation
 
 *discount*: 0.8
 
@@ -22,7 +22,7 @@ Objectworld enviroment is saved in ***objectworld_env.txt*** via *pickle.dump()*
 
 
 
-## Generate trajectories
+# Generate trajectories
 
 *Length of every trajectory*: 8
 
