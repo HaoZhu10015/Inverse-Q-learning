@@ -1,4 +1,4 @@
-# Inverse_Q_learning
+# Inverse Q-learning
 Implementation of algorithms proposed in *Deep Inverse Q-learning with Constraints (Kalweit et al., 2020)*
 
 Arxiv: https://arxiv.org/abs/2008.01712
